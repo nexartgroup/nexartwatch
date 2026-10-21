@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Damit die Handy-App erkennt, dass die Uhr-App installiert ist -->
+    <string-array name="android_wear_capabilities">
+        <item>tagesring_watch</item>
+    </string-array>
+</resources>
