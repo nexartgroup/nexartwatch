@@ -536,21 +536,37 @@ def next_title_slot():
 
 # ---------------------------------------------------------------- Zusatzinfos (bearbeitbare Slots)
 INFO_TEXT = "#ffdfe6ee"
-INFO_ACCENT = "#ff3fa9f5"
+A_ICON = "#ffd0d0d0"
+INFO_MARK = -12345     # Kennzeichen unserer eigenen Zusatzinfos (Minimum des Bereichswerts); siehe InfoServices.kt
+
+
+def info_icon(kind, cy, amb):
+    """Symbol der Zusatzinfo. Fremde Komplikationen behalten die Farben ihres Symbols (Puls rot, Schritte grün ...),
+    bei unseren eigenen Datenquellen kommt die in der Handy-App gewählte Farbe aus dem Farbverlauf der Daten.
+    Im Ruhemodus ist das Symbol grau (Sättigung 0)."""
+    geo = f'x="{CELL_X}" y="{round(cy - CELL_ICON / 2)}" width="{CELL_ICON}" height="{CELL_ICON}"'
+    img = '<Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]"/>'
+    if amb:
+        return (f'<PartImage {geo} tintColor="{A_ICON}"><ImageFilters><HsbFilter saturate="0"/></ImageFilters>{img}</PartImage>')
+    plain = f'<PartImage {geo} tintColor="{WHITE}">{{extra}}{img}</PartImage>'
+    if kind != "RANGED_VALUE":
+        return plain.format(extra="")
+    mine = f"[COMPLICATION.RANGED_VALUE_MIN] == {INFO_MARK}"
+    own = plain.format(extra=(f'<Transform target="alpha" value="{esc(f"({mine}) ? 255 : 0")}"/>'
+                              f'<Transform target="tintColor" value="{esc("extractColorFromColors([COMPLICATION.RANGED_VALUE_COLORS], false, 0.25)")}"/>'))
+    other = plain.format(extra=f'<Transform target="alpha" value="{esc(f"({mine}) ? 0 : 255")}"/>')
+    return own + other
 
 
 def info_cell(kind, cy):
-    """Eine Zusatzinfo: Symbol + Wert. [kind] = Typ der Komplikation (SHORT_TEXT, RANGED_VALUE, GOAL_PROGRESS).
-    Die Farben sind fest (Daten fremder Datenquellen enthalten keine Theme-Farben)."""
+    """Eine Zusatzinfo: Symbol + Wert. [kind] = Typ der Komplikation (SHORT_TEXT, RANGED_VALUE, GOAL_PROGRESS)."""
     value_src = {"SHORT_TEXT": None, "RANGED_VALUE": "[COMPLICATION.RANGED_VALUE_VALUE]",
                  "GOAL_PROGRESS": "[COMPLICATION.GOAL_PROGRESS_VALUE]"}[kind]
 
     def cell(amb):
         fam = "ibm_plex_mono_light" if amb else "ibm_plex_mono_medium"
         col = A_TEXT if amb else INFO_TEXT
-        icon_col = WHITE if amb else INFO_ACCENT
-        out = (f'<PartImage x="{CELL_X}" y="{round(cy - CELL_ICON / 2)}" width="{CELL_ICON}" height="{CELL_ICON}" '
-               f'tintColor="{icon_col}"><Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]"/></PartImage>')
+        out = info_icon(kind, cy, amb)
         if value_src is None:
             out += text_part(CELL_TEXT_X, cy, CELL_TEXT_W, 28, fam, 19, col, template("%s", "[COMPLICATION.TEXT]"))
         else:
@@ -572,7 +588,7 @@ def info_slot(slot_id, name, cy, primary):
     content = "".join(f'<Complication type="{k}">{info_cell(k, cy)}</Complication>' for k in kinds)
     content += '<Complication type="EMPTY"><Group name="leer" x="0" y="0" width="1" height="1"/></Complication>'
     box = f'<BoundingBox x="{CELL_X - 6}" y="{round(cy - 16)}" width="{CELL_TEXT_X + CELL_TEXT_W - CELL_X + 8}" height="32"/>'
-    return slot(slot_id, name, " ".join(kinds), primary, "SHORT_TEXT", content, box, custom=True)
+    return slot(slot_id, name, " ".join(kinds), primary, "RANGED_VALUE", content, box, custom=True)
 
 
 def weather_bitmap_fonts():
@@ -595,6 +611,22 @@ def weather_bitmap_fonts():
 
 
 # ---------------------------------------------------------------- Zusammenbau
+# Antippbare Bereiche ganz oben im Zifferblatt (über allen Komplikationen): (Name, x, y, Breite, Höhe, App)
+TAP_TARGETS = [
+    ("Logo", 199, 24, 52, 50, "com.samsung.android.calendar"),                    # N-Logo -> Kalender
+    ("Uhrzeit", 95, 74, 260, 72, "com.samsung.android.watch.timer"),              # Uhrzeit -> Timer
+    ("Wetter", 86, 314, 140, 36, "com.samsung.android.watch.weather"),            # Temperatur -> Wetter
+]
+
+
+def tap_targets():
+    out = ""
+    for name, x, y, w, h, app in TAP_TARGETS:
+        out += (f'<PartDraw name="tap_{name}" x="{x}" y="{y}" width="{w}" height="{h}"><Launch target="{app}"/>'
+                f'<Rectangle x="0" y="0" width="{w}" height="{h}">{fill("#00000000")}</Rectangle></PartDraw>')
+    return out
+
+
 def build():
     # Ein Tipp irgendwo auf das Zifferblatt öffnet den Kalender (Komplikationen darüber haben Vorrang)
     tap_background = (f'<PartDraw {FULL}><Launch target="com.samsung.android.calendar"/>'
@@ -609,6 +641,7 @@ def build():
         + next_title_slot()
         + info_slot(3, "Zusatzinfo 1", Y_INFO1, "Info1Service")
         + info_slot(5, "Zusatzinfo 2", Y_INFO2, "Info2Service")
+        + tap_targets()
     )
     return (f'<?xml version="1.0" encoding="UTF-8"?>\n'
             f'<WatchFace width="450" height="450" clipShape="CIRCLE">{weather_bitmap_fonts()}'

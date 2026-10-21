@@ -18,7 +18,6 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
     override suspend fun doWork(): Result {
         try {
             WatchSync.pushTheme(applicationContext)   // gleiche Daten werden vom Data Layer nicht doppelt zugestellt
-            WatchSync.pushInfo(applicationContext)
             WatchSync.push(applicationContext)
             keepCountersAlive(applicationContext)
         } catch (_: Exception) {

@@ -15,7 +15,12 @@ import de.mb.tagesring.provider.Refresh
 /** Schritte und Puls über Health Services: passives Mitlesen, Werte landen im [InfoStore]. */
 object HealthSync {
 
-    val PERMISSIONS = arrayOf(Manifest.permission.ACTIVITY_RECOGNITION, Manifest.permission.BODY_SENSORS)
+    /** Ab Wear OS 6 verlangt Health Services für den Puls die Health-Berechtigung statt BODY_SENSORS. */
+    val PERMISSIONS = arrayOf(
+        Manifest.permission.ACTIVITY_RECOGNITION,
+        "android.permission.health.READ_HEART_RATE",
+        "android.permission.health.READ_STEPS",
+    )
 
     fun hasPermissions(context: Context) = PERMISSIONS.all {
         context.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED
@@ -34,6 +39,7 @@ object HealthSync {
             } else {
                 val config = PassiveListenerConfig.builder().setDataTypes(supported.toSet()).build()
                 client.setPassiveListenerServiceAsync(HealthListenerService::class.java, config).await()
+                client.flushAsync().await()      // aktuelle Werte sofort liefern lassen
                 "Angemeldet: " + supported.joinToString { if (it == DataType.STEPS_DAILY) "Schritte" else "Puls" }
             }
         } catch (e: Exception) {
@@ -48,6 +54,7 @@ object HealthSync {
 class HealthListenerService : PassiveListenerService() {
 
     override fun onNewDataPointsReceived(dataPoints: DataPointContainer) {
+        android.util.Log.i("TagesringHealth", "Daten: " + dataPoints.dataTypes.joinToString { it.name })
         dataPoints.getData(DataType.STEPS_DAILY).lastOrNull()?.let { InfoStore.saveSteps(this, it.value) }
         dataPoints.getData(DataType.HEART_RATE_BPM).lastOrNull()?.let { InfoStore.saveHeartRate(this, Math.round(it.value)) }
         Refresh.requestInfo(applicationContext)

@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxSize
@@ -71,7 +69,6 @@ import de.mb.tagesring.phone.data.Counters
 import de.mb.tagesring.phone.data.Palette
 import de.mb.tagesring.phone.data.PhoneCalendar
 import de.mb.tagesring.phone.data.Settings as AppSettings
-import de.mb.tagesring.sync.InfoType
 import de.mb.tagesring.sync.Theme
 import de.mb.tagesring.phone.data.PhoneEvent
 import de.mb.tagesring.phone.data.WatchLink
@@ -242,8 +239,6 @@ private fun Screen(vm: MainViewModel) {
                         onReset = vm::resetTheme,
                     )
                 }
-
-                item { InfoCard(state, onSlot = vm::setInfoSlot) }
 
                 item {
                     SectionCard("Heute auf dem Ring") {
@@ -440,31 +435,6 @@ private fun ColorDialog(title: String, hint: String, current: Int?, onPick: (Int
             }
         },
     )
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun InfoCard(state: UiState, onSlot: (Int, InfoType) -> Unit) {
-    SectionCard("Zusatzinfos neben dem Termin") {
-        Text("Zwei kleine Felder rechts neben dem nächsten Termin. Wähle hier, was sie zeigen.",
-            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        for (slot in 1..2) {
-            val current = if (slot == 1) state.infoSlot1 else state.infoSlot2
-            Text(if (slot == 1) "Oberes Feld" else "Unteres Feld", style = MaterialTheme.typography.titleSmall)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                InfoType.entries.forEach { type ->
-                    FilterChip(selected = type == current, onClick = { onSlot(slot, type) }, label = { Text(type.label) })
-                }
-            }
-            Text(current.hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Text("Auf der Uhr lässt sich jedes Feld auch direkt ändern: Zifferblatt lange drücken, „Anpassen“, Feld antippen – " +
-            "dort stehen alle Komplikationen der Uhr zur Wahl (z. B. Puls von Samsung Health, Timer, Stoppuhr).",
-            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("Schritte und Puls liest die Uhr-App selbst (Health Services). Einmalig auf der Uhr in der App „neXart Watch“ " +
-            "„Schritte und Puls erlauben“ antippen.",
-            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
 }
 
 @Composable

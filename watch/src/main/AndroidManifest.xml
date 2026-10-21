@@ -11,6 +11,8 @@
     <!-- Schritte und Puls für die Zusatzinfos (Health Services) -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
     <uses-permission android:name="android.permission.BODY_SENSORS" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
 
     <queries>
         <!-- Kalender-App der Uhr (Tipp auf Termin / Uhr) -->
@@ -172,14 +174,14 @@
             android:name=".provider.Info1Service"
             android:exported="true"
             android:icon="@drawable/ic_provider"
-            android:label="neXart Watch Zusatzinfo 1"
+            android:label="neXart Watch Schritte"
             android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
             <intent-filter>
                 <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
             </intent-filter>
             <meta-data
                 android:name="android.support.wearable.complications.SUPPORTED_TYPES"
-                android:value="SHORT_TEXT" />
+                android:value="RANGED_VALUE,SHORT_TEXT" />
             <meta-data
                 android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
                 android:value="300" />
@@ -189,14 +191,14 @@
             android:name=".provider.Info2Service"
             android:exported="true"
             android:icon="@drawable/ic_provider"
-            android:label="neXart Watch Zusatzinfo 2"
+            android:label="neXart Watch Puls"
             android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
             <intent-filter>
                 <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
             </intent-filter>
             <meta-data
                 android:name="android.support.wearable.complications.SUPPORTED_TYPES"
-                android:value="SHORT_TEXT" />
+                android:value="RANGED_VALUE,SHORT_TEXT" />
             <meta-data
                 android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
                 android:value="300" />

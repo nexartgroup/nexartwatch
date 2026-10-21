@@ -8,7 +8,6 @@ import com.google.android.gms.wearable.Wearable
 import com.google.android.gms.wearable.WearableListenerService
 import de.mb.tagesring.data.CalendarEvent
 import de.mb.tagesring.data.EventStore
-import de.mb.tagesring.data.InfoStore
 import de.mb.tagesring.data.NotificationSnapshot
 import de.mb.tagesring.data.NotificationStore
 import de.mb.tagesring.data.ThemeStore
@@ -28,19 +27,6 @@ class PhoneSyncService : WearableListenerService() {
                 val colors = DataMapItem.fromDataItem(item).dataMap
                     .getIntegerArrayList(SyncContract.T_COLORS).orEmpty()
                 if (ThemeStore.save(this, Theme.fromList(colors))) Refresh.requestAll(applicationContext)
-                continue
-            }
-            if (item.uri.path == SyncContract.PATH_INFO && event.type == DataEvent.TYPE_CHANGED) {
-                val m = DataMapItem.fromDataItem(item).dataMap
-                val changed = InfoStore.savePhone(
-                    this,
-                    InfoType.fromId(m.getString(SyncContract.I_SLOT1), InfoType.STEPS),
-                    InfoType.fromId(m.getString(SyncContract.I_SLOT2), InfoType.HEART_RATE),
-                    m.getInt(SyncContract.I_PHONE_BATTERY, -1),
-                    m.getBoolean(SyncContract.I_PHONE_CHARGING),
-                    m.getLong(SyncContract.I_ALARM_AT),
-                )
-                if (changed) Refresh.requestInfo(applicationContext)
                 continue
             }
             if (item.uri.path == SyncContract.PATH_COUNTERS && event.type == DataEvent.TYPE_CHANGED) {

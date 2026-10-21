@@ -9,8 +9,6 @@ import androidx.core.app.NotificationManagerCompat
 import de.mb.tagesring.phone.data.CalendarSource
 import de.mb.tagesring.phone.data.CounterSync
 import de.mb.tagesring.phone.data.PhoneNotificationService
-import de.mb.tagesring.phone.data.PhoneInfo
-import de.mb.tagesring.sync.InfoType
 import de.mb.tagesring.sync.Theme
 import de.mb.tagesring.phone.data.PhoneCalendar
 import de.mb.tagesring.phone.data.PhoneEvent
@@ -46,9 +44,6 @@ data class UiState(
     val colorMode: Int = 0,
     val paletteStart: Int = 0,
     val batteryUnrestricted: Boolean = false,
-    val infoSlot1: InfoType = InfoType.STEPS,
-    val infoSlot2: InfoType = InfoType.HEART_RATE,
-    val phoneInfo: PhoneInfo = PhoneInfo(-1, false, 0L),
 ) {
     /** Termine mit den Farben, die auch die Uhr bekommt. */
     val events: List<PhoneEvent> get() = WatchSync.colorize(raw, colorMode, paletteStart)
@@ -92,9 +87,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 theme = settings.theme,
                 colorMode = settings.colorMode,
                 paletteStart = settings.paletteStart,
-                infoSlot1 = settings.infoSlot(1),
-                infoSlot2 = settings.infoSlot(2),
-                phoneInfo = PhoneInfo.read(context),
                 batteryUnrestricted = (context.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager)
                     .isIgnoringBatteryOptimizations(context.packageName),
                 lastSyncAt = settings.lastSyncAt,
@@ -104,7 +96,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             // Beim Öffnen der App das Farbschema abgleichen (z. B. nach einem Update mit neuen Standardfarben)
             try {
                 WatchSync.pushTheme(context)
-                WatchSync.pushInfo(context)
             } catch (_: Exception) {
             }
             val listener = NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
@@ -169,19 +160,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         settings.paletteStart = index
         _state.value = _state.value.copy(paletteStart = index)
         applyAndSync()
-    }
-
-    fun setInfoSlot(index: Int, type: InfoType) {
-        settings.setInfoSlot(index, type)
-        _state.value = _state.value.copy(
-            infoSlot1 = settings.infoSlot(1), infoSlot2 = settings.infoSlot(2), phoneInfo = PhoneInfo.read(context),
-        )
-        viewModelScope.launch {
-            try {
-                WatchSync.pushInfo(context)
-            } catch (_: Exception) {
-            }
-        }
     }
 
     fun setAllDay(value: Boolean) {

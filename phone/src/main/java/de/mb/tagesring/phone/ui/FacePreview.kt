@@ -38,12 +38,9 @@ import androidx.compose.ui.unit.dp
 import de.mb.tagesring.phone.R
 import de.mb.tagesring.phone.data.Counters
 import de.mb.tagesring.phone.data.PhoneEvent
-import de.mb.tagesring.phone.data.PhoneInfo
-import de.mb.tagesring.sync.InfoType
 import de.mb.tagesring.sync.Theme
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
-import java.time.temporal.IsoFields
 import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.LocalDate
@@ -75,20 +72,13 @@ fun WatchFacePreview(state: UiState, counters: Counters, modifier: Modifier = Mo
         ImageBitmap.imageResource(R.drawable.wx_partly_day),
         ImageBitmap.imageResource(R.drawable.ic_logo_n),
         ImageBitmap.imageResource(R.drawable.ic_logo_n_mono),
-        mapOf(
-            InfoType.STEPS to painterResource(R.drawable.ic_info_steps),
-            InfoType.HEART_RATE to painterResource(R.drawable.ic_info_heart),
-            InfoType.BATTERY_PHONE to painterResource(R.drawable.ic_info_battery),
-            InfoType.ALARM to painterResource(R.drawable.ic_info_alarm),
-            InfoType.WEEK to painterResource(R.drawable.ic_info_week),
-        ),
+        painterResource(R.drawable.ic_info_steps),
+        painterResource(R.drawable.ic_info_heart),
     )
     val context = LocalContext.current
     val paints = remember { FacePaints(context) }
     val events = state.events
-    val model = remember(events, state.theme, counters, now, state.infoSlot1, state.infoSlot2, state.phoneInfo) {
-        FaceModel.build(events, state.theme, counters, now, listOf(state.infoSlot1, state.infoSlot2), state.phoneInfo)
-    }
+    val model = remember(events, state.theme, counters, now) { FaceModel.build(events, state.theme, counters, now) }
 
     Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Canvas(Modifier.size(224.dp).clickable { ambient = !ambient }) {
@@ -115,7 +105,7 @@ private val WEEKDAYS = listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
 private class FaceIcons(
     val phone: ImageBitmap, val whatsapp: ImageBitmap, val mail: ImageBitmap, val weather: ImageBitmap,
     val logo: ImageBitmap, val logoMono: ImageBitmap,
-    val info: Map<InfoType, Painter>,
+    val steps: Painter, val heart: Painter,
 )
 
 /** IBM Plex Mono wie auf dem Watchface (und auf nexart.de). */
@@ -146,26 +136,12 @@ private class FaceModel(
     val time: String,
     val weekday: String,
     val date: String,
-    /** Art und Text der beiden Zusatzinfos (null = Feld leer). */
-    val infos: List<Pair<InfoType, String>?>,
+    /** Zusatzinfos: Beispielwerte (die Uhr liefert die echten Schritte und den Puls). */
+    val steps: String = "4.231",
+    val heartRate: String = "72",
 ) {
     companion object {
-        fun infoText(type: InfoType, phone: PhoneInfo, now: Long): String? = when (type) {
-            InfoType.NONE -> null
-            InfoType.STEPS -> "4.231"          // Beispielwert: die Uhr liefert den echten
-            InfoType.HEART_RATE -> "72"        // Beispielwert
-            InfoType.BATTERY_PHONE -> if (phone.battery < 0) "–" else "${phone.battery}%"
-            InfoType.ALARM -> if (phone.alarmAt <= now) "–" else {
-                val a = Instant.ofEpochMilli(phone.alarmAt).atZone(ZoneId.systemDefault())
-                if (phone.alarmAt - now < 20 * 3_600_000L) HM.format(a) else WEEKDAYS[a.dayOfWeek.value - 1] + " " + HM.format(a)
-            }
-            InfoType.WEEK -> "KW " + LocalDate.now().get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
-        }
-
-        fun build(
-            events: List<PhoneEvent>, theme: Theme, counters: Counters, now: Long,
-            infoTypes: List<InfoType>, phone: PhoneInfo,
-        ): FaceModel {
+        fun build(events: List<PhoneEvent>, theme: Theme, counters: Counters, now: Long): FaceModel {
             val zone = ZoneId.systemDefault()
             val today = LocalDate.now(zone)
             val from = today.atStartOfDay(zone).toInstant().toEpochMilli()
@@ -219,7 +195,6 @@ private class FaceModel(
                 now, local.hour * 60f + local.minute, theme, lanes[0], lanes[1], allDay,
                 label, title, range, info, counters, HM.format(local),
                 WEEKDAYS[local.dayOfWeek.value - 1], DATE.format(local),
-                infoTypes.map { type -> infoText(type, phone, now)?.let { type to it } },
             )
         }
 
@@ -321,17 +296,18 @@ private fun DrawScope.drawDate(weekdayPaint: TextPaint, datePaint: TextPaint, m:
     drawText(datePaint, m.date, left + 36f, Y_DATE, 20f, color)
 }
 
-private const val INFO_ACCENT = 0xFF3FA9F5.toInt()
 private const val INFO_TEXT = 0xFFDFE6EE.toInt()
+private const val A_ICON = 0xFFD0D0D0.toInt()
 
-/** Die beiden Zusatzinfos rechts neben dem Termin: Symbol + Wert. */
-private fun DrawScope.drawInfoCells(m: FaceModel, icons: FaceIcons, paint: TextPaint, iconColor: Int, textColor: Int) {
-    listOf(Y_INFO1, Y_INFO2).forEachIndexed { i, cy ->
-        val (type, text) = m.infos.getOrNull(i) ?: return@forEachIndexed
-        icons.info[type]?.let { painter ->
-            withTransform({ translate(270f, cy - 10f) }) {
-                with(painter) { draw(Size(20f, 20f), colorFilter = ColorFilter.tint(c(iconColor))) }
-            }
+/** Die beiden Zusatzinfos rechts neben dem Termin: Symbol (eigene Farbe je Feld) + Wert. */
+private fun DrawScope.drawInfoCells(m: FaceModel, icons: FaceIcons, paint: TextPaint, color1: Int, color2: Int, textColor: Int) {
+    listOf(
+        Triple(Y_INFO1, icons.steps to color1, m.steps),
+        Triple(Y_INFO2, icons.heart to color2, m.heartRate),
+    ).forEach { (cy, iconAndColor, text) ->
+        val (painter, color) = iconAndColor
+        withTransform({ translate(270f, cy - 10f) }) {
+            with(painter) { draw(Size(20f, 20f), colorFilter = ColorFilter.tint(c(color))) }
         }
         drawText(paint, text, 295f, cy, 19f, textColor, maxWidth = 90f)
     }
@@ -388,7 +364,7 @@ private fun DrawScope.drawActive(m: FaceModel, icons: FaceIcons, p: FacePaints) 
     drawText(p.semibold, m.title, X0, Y_TITLE, 21f, t.title, maxWidth = TITLE_W)
     drawText(p.regular, m.range, X0, Y_RANGE, 21f, t.date, maxWidth = TITLE_W)
     drawText(p.regular, m.info, X0, Y_INFO, 18f, t.marks, maxWidth = TEXT_W)
-    drawInfoCells(m, icons, p.medium, INFO_ACCENT, INFO_TEXT)
+    drawInfoCells(m, icons, p.medium, t.icon1, t.icon2, INFO_TEXT)
 
     // Wetter (Beispiel) und Akku (Beispiel)
     drawIcon(icons.weather, 104f, Y_ROW, 28f, t.text)
@@ -455,7 +431,7 @@ private fun DrawScope.drawAmbient(m: FaceModel, icons: FaceIcons, p: FacePaints)
     drawText(p.regular, m.title, X0, Y_TITLE, 21f, A_TIME, maxWidth = TITLE_W)
     drawText(p.light, m.range, X0, Y_RANGE, 21f, A_RANGE, maxWidth = TITLE_W)
     drawText(p.light, m.info, X0, Y_INFO, 18f, A_INFO, maxWidth = TEXT_W)
-    drawInfoCells(m, icons, p.light, 0xFFFFFFFF.toInt(), A_TEXT)
+    drawInfoCells(m, icons, p.light, A_ICON, A_ICON, A_TEXT)
     drawText(p.light, "21°C", 90f, Y_ROW, 25f, A_TEXT)
     drawText(p.light, "80%", 0.80f * 450f, Y_ROW, 25f, A_TEXT, Paint.Align.RIGHT)
 

@@ -7,6 +7,8 @@ package de.mb.tagesring.sync
  *
  *  Gruppe "main" (Hauptebene):  time, text, marks, track, progress, badge, date
  *  Gruppe "title" (Zeile 1+2):  label, title
+ *  Zusatzinfos:                 icon1, icon2 (Farbe der Symbole; nur für die eigenen Datenquellen der Uhr-App,
+ *                               fremde Komplikationen behalten die Farben ihres Symbols)
  *
  * Die Zeilen 3 und 4 (Uhrzeit, Kalender · Ort) nutzen die Farben "date" und "marks" der Hauptebene.
  */
@@ -29,11 +31,15 @@ data class Theme(
     val label: Int = 0xFF3FA9F5.toInt(),
     /** Titel des Termins */
     val title: Int = 0xFFEEF3F8.toInt(),
+    /** Symbol der oberen Zusatzinfo (Schritte) */
+    val icon1: Int = 0xFF6CC3A0.toInt(),
+    /** Symbol der unteren Zusatzinfo (Puls) */
+    val icon2: Int = 0xFFFF5C5C.toInt(),
 ) {
     fun main() = intArrayOf(time, text, marks, track, progress, badge, date)
     fun titleGroup() = intArrayOf(label, title)
 
-    fun toList(): List<Int> = listOf(time, text, marks, track, progress, badge, date, label, title)
+    fun toList(): List<Int> = listOf(time, text, marks, track, progress, badge, date, label, title, icon1, icon2)
 
     companion object {
         val DEFAULT = Theme()
@@ -42,18 +48,23 @@ data class Theme(
         val LEGACY_DEFAULT = Theme(
             time = 0xFFFFFFFF.toInt(), text = 0xFFFFFFFF.toInt(), marks = 0xFF8B939B.toInt(), track = 0xFF2B3238.toInt(),
             progress = 0xFF4FC3F7.toInt(), badge = 0xFF33383D.toInt(), date = 0xFFFFFFFF.toInt(),
-            label = 0xFFFFFFFF.toInt(), title = 0xFFFFFFFF.toInt(),
+            label = 0xFFFFFFFF.toInt(), title = 0xFFFFFFFF.toInt(), icon1 = 0xFF6CC3A0.toInt(), icon2 = 0xFFFF5C5C.toInt(),
         )
 
         fun fromList(l: List<Int>): Theme {
-            if (l.size < 9) return DEFAULT      // ältere Speicherstände hatten 11 Werte: die ersten 9 gelten weiter
-            return Theme(l[0], l[1], l[2], l[3], l[4], l[5], l[6], l[7], l[8])
+            if (l.size < 9) return DEFAULT
+            // ältere Speicherstände haben weniger Werte: fehlende Symbolfarben = Standard
+            return Theme(
+                l[0], l[1], l[2], l[3], l[4], l[5], l[6], l[7], l[8],
+                l.getOrElse(9) { DEFAULT.icon1 }, l.getOrElse(10) { DEFAULT.icon2 },
+            )
         }
 
         /** Namen für die Handy-App, in der Reihenfolge von [toList]. */
         val ROLE_NAMES = listOf(
             "Uhrzeit", "Wetter, Akku, Zahlen", "Stundenmarken, Kalender · Ort", "Ring-Spur", "Vergangene Zeit",
             "Zähler-Hintergrund", "Datum, Uhrzeit des Termins", "Zeile „Nächster“", "Titel des Termins",
+            "Symbol Zusatzinfo 1 (Schritte)", "Symbol Zusatzinfo 2 (Puls)",
         )
     }
 }

@@ -52,14 +52,6 @@ class DebugReceiver : BroadcastReceiver() {
                         settings.setCalendarColor(id.toLong(), if (c == "none") null else android.graphics.Color.parseColor(c))
                         "Farben: ${settings.calendarColors}"
                     }
-                    // info=<Typ1>,<Typ2> (none|steps|hr|phone_battery|alarm|week)
-                    "info" -> {
-                        intent.getStringExtra("value").orEmpty().split(",").forEachIndexed { i, id ->
-                            settings.setInfoSlot(i + 1, de.mb.tagesring.sync.InfoType.fromId(id.trim()))
-                        }
-                        WatchSync.pushInfo(app)
-                        "Info: ${settings.infoSlot(1)} / ${settings.infoSlot(2)}"
-                    }
                     "theme" -> { WatchSync.pushTheme(app); "Theme gesendet: ${settings.theme.toList()}" }
                     "rainbow" -> {
                         settings.colorMode = if (intent.getStringExtra("value") == "1") Settings.MODE_PALETTE else Settings.MODE_CALENDAR

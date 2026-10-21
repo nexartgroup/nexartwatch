@@ -1,7 +1,6 @@
 package de.mb.tagesring.phone.data
 
 import android.content.Context
-import de.mb.tagesring.sync.InfoType
 import de.mb.tagesring.sync.Theme
 
 /** Einstellungen der Handy-App (Kalenderauswahl, Ganztägig). */
@@ -47,9 +46,12 @@ class Settings(context: Context) {
      */
     var theme: Theme
         get() {
-            val saved = prefs.getString(KEY_THEME, null)?.split(',')?.mapNotNull { it.toLongOrNull()?.toInt() }
-                ?.let { Theme.fromList(it) } ?: return Theme.DEFAULT
-            if (prefs.getInt(KEY_THEME_VERSION, 1) >= THEME_VERSION) return saved
+            val values = prefs.getString(KEY_THEME, null)?.split(',')?.mapNotNull { it.toLongOrNull()?.toInt() }
+                ?: return Theme.DEFAULT
+            val version = prefs.getInt(KEY_THEME_VERSION, 1)
+            // Bis Version 2 hatte das Schema 11 Werte, deren letzte zwei (Uhrzeit/Ort des Termins) entfielen: nur die ersten 9 gelten
+            val saved = Theme.fromList(if (version < THEME_VERSION) values.take(9) else values)
+            if (version >= THEME_VERSION) return saved
             val old = Theme.LEGACY_DEFAULT.toList()
             val new = Theme.DEFAULT.toList()
             val migrated = Theme.fromList(saved.toList().mapIndexed { i, v -> if (v == old[i]) new[i] else v })
@@ -69,12 +71,6 @@ class Settings(context: Context) {
         get() = prefs.getInt(KEY_PALETTE_START, 0).coerceIn(0, Palette.COLORS.size - 1)
         set(value) = prefs.edit().putInt(KEY_PALETTE_START, value).apply()
 
-    /** Zusatzinfos rechts neben dem Termin; [index] 1 = oben, 2 = unten. */
-    fun infoSlot(index: Int): InfoType =
-        InfoType.fromId(prefs.getString("info_slot$index", null), if (index == 1) InfoType.STEPS else InfoType.HEART_RATE)
-
-    fun setInfoSlot(index: Int, type: InfoType) = prefs.edit().putString("info_slot$index", type.id).apply()
-
     var lastSyncAt: Long
         get() = prefs.getLong(KEY_LAST_SYNC, 0L)
         set(value) = prefs.edit().putLong(KEY_LAST_SYNC, value).apply()
@@ -86,7 +82,7 @@ class Settings(context: Context) {
     companion object {
         const val MODE_CALENDAR = 0
         const val MODE_PALETTE = 1
-        const val THEME_VERSION = 2
+        const val THEME_VERSION = 3
 
         const val KEY_SELECTED = "selected_calendars"
         const val KEY_ALL_DAY = "show_all_day"

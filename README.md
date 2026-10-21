@@ -24,12 +24,17 @@ Besteht aus drei Teilen, die zusammenarbeiten:
 * **Design:** Farben und Schrift (IBM Plex Mono) lehnen sich an nexart.de an – dunkles Marineblau-Grau, Akzentblau #3FA9F5, kühle Grautöne.
   Die Handy-App trägt dasselbe Farbschema und zeigt oben immer eine Vorschau des Watchfaces mit den aktuellen Einstellungen
   (Tippen schaltet auf den Ruhemodus um; Wetter und Akku sind dort Beispielwerte).
+* **Zusatzinfos:** Rechts neben dem Termin zwei kleine Felder (standardmäßig **Schritte** und **Puls**, aus Health Services der Uhr).
+  Beide sind normale Komplikationen und lassen sich auf der Uhr wie bei jedem Zifferblatt ändern: Display lange drücken →
+  „Anpassen“ → Feld antippen → z. B. Puls von Samsung Health, Timer, Stoppuhr. Das Symbol behält bei fremden Komplikationen
+  seine eigene Farbe (Puls rot, Schritte grün …); bei den eigenen Feldern legst du die Farbe in der Handy-App fest
+  („Symbol Zusatzinfo 1/2“). Im Ruhemodus sind die Symbole grau.
 * **Zähler:** Anrufe in Abwesenheit / WhatsApp / Mail (Nachrichten, nicht nur Benachrichtigungen) und – als Pille
   unten – alle übrigen aktiven Benachrichtigungen **des Handys**.
 * **Wetter** und **Akku** der Uhr.
 * **Ruhemodus (AOD):** rein schwarz-weiß mit dünnen Linien. Zum Einbrennschutz wandert der gesamte Inhalt jede Minute um
   wenige Pixel (±3 px) und es leuchten nur wenige Flächen.
-* **Tippen:** Tipp auf die Uhr öffnet den Kalender (Samsung Kalender), Tipp auf den nächsten Termin öffnet genau diesen Termin.
+* **Tippen:** Logo → Kalender, Uhrzeit → Timer, Temperatur → Wetter, nächster Termin → genau dieser Termin, übrige Fläche → Kalender (Samsung-Apps der Uhr).
 
 ## Einrichtung
 
@@ -53,6 +58,8 @@ Besteht aus drei Teilen, die zusammenarbeiten:
      und zwischen **Kalenderfarben** und **Palette** wählen. Die Palette gibt den Terminen der Reihe nach sechs aufeinander
      abgestimmte Farben (Blau, Bernstein, Türkis, Lachs, Lavendel, Limette – immer im Wechsel zum Komplementärton), danach
      beginnt die Folge von vorn; Nachbarn sind so immer klar zu unterscheiden. Die Startfarbe lässt sich per Tipp wählen.
+   * *Schritte und Puls*: einmalig auf der Uhr in der App „neXart Watch“ **„Schritte und Puls erlauben“** tippen
+     (Berechtigungen für Health Services).
    * *Benachrichtigungen*: **Benachrichtigungszugriff erlauben** (Handy-Einstellungen). Bei von Hand installierten Apps
      vorher in den App-Infos über ⋮ „Eingeschränkte Einstellungen zulassen“.
    * *Benachrichtigungen* – damit die Zähler auch ankommen, wenn das Handy im Ruhezustand (Doze) liegt:
@@ -71,11 +78,17 @@ Besteht aus drei Teilen, die zusammenarbeiten:
   (dort sind meist nur Google-Kalender, und ohne Auswahl).
 * **Zähler:** Die Handy-App zählt die aktiven Benachrichtigungen (WhatsApp, Mail-Apps, Telefon-Apps, Rest) und sendet sie
   sofort an die Uhr (kurzer Wake-Lock im Benachrichtigungsdienst, kein Timer – Timer stehen im Tiefschlaf still).
-* **Farben:** Die Handy-App sendet ein Farbschema (11 Farben). Die Uhr reicht es dem Watchface über die Komplikationsdaten
+* **Farben:** Die Handy-App sendet ein Farbschema (11 Farben, inkl. der Symbolfarben der Zusatzinfos). Die Uhr reicht es dem Watchface über die Komplikationsdaten
   weiter (Farbverlauf der Hauptebene bzw. Farben der gewichteten Elemente); das Watchface (Watch Face Format 4, Wear OS 6)
   wendet sie per Farb-Transformation `extractColorFromColors` an. Ohne Daten gelten die Standardfarben.
 * **Kapazität des Rings:** Wear OS erlaubt pro Komplikation höchstens 7 gewichtete Elemente (Lücken zählen mit) und ein
-  WFF-Watchface höchstens 8 Komplikationen. Es passen etwa 9–12 Termine in die Hauptspur und etwa 3–4 in die innere Spur.
+  WFF-Watchface höchstens 8 Komplikationen. Belegung: Hauptebene, 2× Termin-Ring (Spur A), 1× innere Spur (B, für
+  überlappende Termine und Überlauf), Ganztägig, nächster Termin und die beiden Zusatzinfos. Es passen etwa 9 Termine
+  gleichzeitig auf den Ring; bei mehr werden vergangene und späte Termine weggelassen.
+* **Zusatzinfos:** Zwei bearbeitbare Komplikations-Felder (`isCustomizable`). Standardquellen sind `Info1Service` (Schritte) und
+  `Info2Service` (Puls) der Uhr-App; sie lesen passiv über Health Services (`HealthListenerService`) und liefern Bereichswerte mit
+  Kennzeichen `-12345` und einem Farbverlauf mit der Symbolfarbe aus dem Farbschema. Das Watchface zeigt bei diesem Kennzeichen
+  die gewählte Symbolfarbe, sonst die Originalfarben des Symbols der gewählten Komplikation.
 
 ## Bauen
 

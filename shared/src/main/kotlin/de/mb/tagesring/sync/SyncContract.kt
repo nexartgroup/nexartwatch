@@ -24,15 +24,6 @@ object SyncContract {
     const val T_COLORS = "colors"          // IntArray, Reihenfolge wie Theme.toList()
     const val T_UPDATED_AT = "updatedAt"
 
-    // ---- Handy -> Uhr: Zusatzinfos neben dem nächsten Termin (DataItem)
-    const val PATH_INFO = "/tagesring/info"
-    const val I_SLOT1 = "slot1"            // InfoType.id für das obere Feld
-    const val I_SLOT2 = "slot2"            // InfoType.id für das untere Feld
-    const val I_PHONE_BATTERY = "battery"  // Ladestand des Handys in %, -1 = unbekannt
-    const val I_PHONE_CHARGING = "charging"
-    const val I_ALARM_AT = "alarmAt"       // nächster Wecker des Handys (ms), 0 = keiner
-    const val I_UPDATED_AT = "updatedAt"
-
     // ---- Handy -> Uhr: Benachrichtigungszähler (DataItem)
     const val PATH_COUNTERS = "/tagesring/counters"
     const val C_CONNECTED = "connected"

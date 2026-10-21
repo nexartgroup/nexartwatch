@@ -45,17 +45,6 @@ class DebugReceiver : BroadcastReceiver() {
             }
             return
         }
-        // info=<Typ1>,<Typ2>,<Akku>,<Wecker in Minuten ab jetzt>  (Typen: none|steps|hr|phone_battery|alarm|week)
-        intent.getStringExtra("info")?.let { v ->
-            val p = v.split(",").map { it.trim() }
-            de.mb.tagesring.data.InfoStore.savePhone(
-                context, de.mb.tagesring.sync.InfoType.fromId(p.getOrNull(0)), de.mb.tagesring.sync.InfoType.fromId(p.getOrNull(1)),
-                p.getOrNull(2)?.toIntOrNull() ?: 80, false,
-                System.currentTimeMillis() + (p.getOrNull(3)?.toLongOrNull() ?: 600L) * 60_000L,
-            )
-            Refresh.requestInfo(context)
-            return
-        }
         intent.getStringExtra("health")?.let {
             val pending = goAsync()
             CoroutineScope(Dispatchers.Default).launch {
