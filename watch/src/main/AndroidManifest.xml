@@ -8,10 +8,14 @@
     <!-- Watch Face Push (Wear OS 6): Watchface von der App aus installieren und aktivieren -->
     <uses-permission android:name="com.google.wear.permission.PUSH_WATCH_FACES" />
     <uses-permission android:name="com.google.wear.permission.SET_PUSHED_WATCH_FACE_AS_ACTIVE" />
+    <!-- Schritte und Puls für die Zusatzinfos (Health Services) -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
 
     <queries>
         <!-- Kalender-App der Uhr (Tipp auf Termin / Uhr) -->
         <package android:name="com.samsung.android.calendar" />
+        <package android:name="com.google.android.wearable.healthservices" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.APP_CALENDAR" />
@@ -86,23 +90,6 @@
         </service>
 
         <service
-            android:name=".provider.RingA3Service"
-            android:exported="true"
-            android:icon="@drawable/ic_provider"
-            android:label="neXart Watch Termine A3"
-            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
-            <intent-filter>
-                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
-            </intent-filter>
-            <meta-data
-                android:name="android.support.wearable.complications.SUPPORTED_TYPES"
-                android:value="WEIGHTED_ELEMENTS" />
-            <meta-data
-                android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
-                android:value="300" />
-        </service>
-
-        <service
             android:name=".provider.RingB1Service"
             android:exported="true"
             android:icon="@drawable/ic_provider"
@@ -154,23 +141,6 @@
         </service>
 
         <service
-            android:name=".provider.NextDetailService"
-            android:exported="true"
-            android:icon="@drawable/ic_provider"
-            android:label="neXart Watch Termin-Details"
-            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
-            <intent-filter>
-                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
-            </intent-filter>
-            <meta-data
-                android:name="android.support.wearable.complications.SUPPORTED_TYPES"
-                android:value="WEIGHTED_ELEMENTS" />
-            <meta-data
-                android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
-                android:value="300" />
-        </service>
-
-        <service
             android:name=".provider.CounterService"
             android:exported="true"
             android:icon="@drawable/ic_provider"
@@ -197,5 +167,45 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+    
+        <service
+            android:name=".provider.Info1Service"
+            android:exported="true"
+            android:icon="@drawable/ic_provider"
+            android:label="neXart Watch Zusatzinfo 1"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
+            </intent-filter>
+            <meta-data
+                android:name="android.support.wearable.complications.SUPPORTED_TYPES"
+                android:value="SHORT_TEXT" />
+            <meta-data
+                android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
+                android:value="300" />
+        </service>
+
+        <service
+            android:name=".provider.Info2Service"
+            android:exported="true"
+            android:icon="@drawable/ic_provider"
+            android:label="neXart Watch Zusatzinfo 2"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
+            </intent-filter>
+            <meta-data
+                android:name="android.support.wearable.complications.SUPPORTED_TYPES"
+                android:value="SHORT_TEXT" />
+            <meta-data
+                android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
+                android:value="300" />
+        </service>
+
+        <!-- Schritte und Puls (Health Services, passives Mitlesen) -->
+        <service
+            android:name=".health.HealthListenerService"
+            android:exported="true"
+            android:permission="com.google.android.wearable.healthservices.permission.PASSIVE_DATA_BINDING" />
     </application>
 </manifest>

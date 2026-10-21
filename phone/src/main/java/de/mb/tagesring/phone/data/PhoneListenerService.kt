@@ -14,6 +14,7 @@ class PhoneListenerService : WearableListenerService() {
                 try {
                     WatchSync.push(applicationContext)
                     WatchSync.pushTheme(applicationContext)
+                    WatchSync.pushInfo(applicationContext)
                     if (CounterSync.current.value.connected) CounterSync.push(applicationContext)
                 } catch (_: Exception) {
                 }

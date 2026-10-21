@@ -55,6 +55,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.2")
     implementation("com.google.android.gms:play-services-wearable:19.0.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
+    // Schritte und Puls für die Zusatzinfos (passives Mitlesen über Health Services)
+    implementation("androidx.health:health-services-client:1.0.0")
+    implementation("androidx.concurrent:concurrent-futures-ktx:1.2.0")
 }
 
 // ---------------------------------------------------------------------------------------------

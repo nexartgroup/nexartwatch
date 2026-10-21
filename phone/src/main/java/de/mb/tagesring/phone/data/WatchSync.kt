@@ -75,6 +75,21 @@ object WatchSync {
     }
 
     /** Schickt die Farben des Watchfaces an die Uhr. */
+    /** Auswahl der Zusatzinfos sowie Akku und Wecker des Handys. */
+    suspend fun pushInfo(context: Context) {
+        val settings = Settings(context)
+        val info = PhoneInfo.read(context)
+        val request = PutDataMapRequest.create(SyncContract.PATH_INFO).apply {
+            dataMap.putString(SyncContract.I_SLOT1, settings.infoSlot(1).id)
+            dataMap.putString(SyncContract.I_SLOT2, settings.infoSlot(2).id)
+            dataMap.putInt(SyncContract.I_PHONE_BATTERY, info.battery)
+            dataMap.putBoolean(SyncContract.I_PHONE_CHARGING, info.charging)
+            dataMap.putLong(SyncContract.I_ALARM_AT, info.alarmAt)
+            dataMap.putLong(SyncContract.I_UPDATED_AT, System.currentTimeMillis())
+        }.asPutDataRequest().setUrgent()
+        Wearable.getDataClient(context).putDataItem(request).await()
+    }
+
     suspend fun pushTheme(context: Context) {
         val theme = Settings(context).theme
         val request = PutDataMapRequest.create(SyncContract.PATH_THEME).apply {

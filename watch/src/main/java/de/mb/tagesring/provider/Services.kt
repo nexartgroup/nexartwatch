@@ -91,7 +91,6 @@ abstract class RingService(private val lane: Int, private val chunk: Int) :
 
 class RingA1Service : RingService(0, 0)
 class RingA2Service : RingService(0, 1)
-class RingA3Service : RingService(0, 2)
 class RingB1Service : RingService(1, 0)
 
 /** Dünner Außenring für ganztägige Termine (nur wenn in der Handy-App eingeschaltet). */
@@ -208,35 +207,6 @@ class NextTitleService : SuspendingComplicationDataSourceService() {
     }
 }
 
-/** Zeile 3: "16:00-17:00" (Textfeld), Zeile 4: "Kalender · Ort" (Titelfeld). */
-class NextDetailService : SuspendingComplicationDataSourceService() {
-
-    private fun colors() = ThemeStore.theme(applicationContext).detailGroup()
-
-    override fun getPreviewData(type: ComplicationType): ComplicationData? {
-        if (type != ComplicationType.WEIGHTED_ELEMENTS) return null
-        return lines(applicationContext, text("Büro · Konferenzraum A"), text("16:00-17:00"), "Termin", Theme.DEFAULT.detailGroup(), null)
-    }
-
-    override suspend fun onComplicationRequest(request: ComplicationRequest): ComplicationData? {
-        val context = applicationContext
-        val source = EventSource(context)
-        if (!source.canRead()) {
-            return lines(context, null, text("App neXart Watch öffnen"), "Hinweis", colors(), null)
-        }
-        val info = withContext(Dispatchers.IO) { NextEvent.find(source, System.currentTimeMillis()) }
-        if (info == null) {
-            // Ohne Handy-App kennt die Uhr evtl. nur wenige Kalender – darauf hinweisen
-            if (source.hasPhoneData()) return NoDataComplicationData()
-            return lines(context, null, text("Handy-App einrichten"), "Hinweis", colors(), TapActions.calendar(context))
-        }
-        return lines(
-            context, NextEvent.info(info.event)?.let { text(it) }, text(NextEvent.range(info.event)),
-            "Zeit und Ort", colors(), TapActions.event(context, info.event),
-        )
-    }
-}
-
 // ------------------------------------------------------------------ Zähler
 
 /**
@@ -253,17 +223,29 @@ class CounterService : SuspendingComplicationDataSourceService() {
     }
 
     override suspend fun onComplicationRequest(request: ComplicationRequest): ComplicationData? {
-        val s = NotificationStore.snapshot(applicationContext)
-        return build(s.phone, s.whatsapp, s.mail, s.other, s.connected, ThemeStore.theme(applicationContext))
+        val context = applicationContext
+        val s = NotificationStore.snapshot(context)
+        // Zeile 3 und 4 des nächsten Termins (Uhrzeit, Kalender · Ort) zeichnet das Watchface in dieser Hauptebene
+        val next = withContext(Dispatchers.IO) {
+            if (EventSource(context).canRead()) NextEvent.find(EventSource(context), System.currentTimeMillis()) else null
+        }
+        val range = next?.let { NextEvent.range(it.event) } ?: ""
+        val info = next?.let { NextEvent.info(it.event) } ?: ""
+        return build(s.phone, s.whatsapp, s.mail, s.other, s.connected, ThemeStore.theme(context), range, info)
     }
 
-    private fun build(phone: Int, whatsapp: Int, mail: Int, other: Int, connected: Boolean, theme: Theme): ComplicationData {
+    private fun build(
+        phone: Int, whatsapp: Int, mail: Int, other: Int, connected: Boolean, theme: Theme,
+        range: String = "15:00-19:00", info: String = "Familie · Ort",
+    ): ComplicationData {
         val a = pack(phone, whatsapp)
         val b = pack(mail, other)
         val value = (a + b).toFloat()
+        // Komplikationstexte dürfen nicht leer sein
+        fun nb(s: String) = text(s.ifBlank { "\u00A0" })
         return RangedValueComplicationData.Builder(
             value, a.toFloat(), value + if (connected) 2f else 1f, text("Benachrichtigungen"),
-        ).setText(text("$phone $whatsapp $mail $other"))
+        ).setText(nb(range)).setTitle(nb(info))
             // Farben der Hauptebene des Watchfaces (siehe Theme)
             .setColorRamp(ColorRamp(mainColors(theme), false))
             .setTapAction(TapActions.calendar(applicationContext))

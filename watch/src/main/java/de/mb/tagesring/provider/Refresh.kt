@@ -20,9 +20,10 @@ import java.time.ZoneId
 object Refresh {
 
     private val ALL = listOf(
-        RingA1Service::class.java, RingA2Service::class.java, RingA3Service::class.java,
+        RingA1Service::class.java, RingA2Service::class.java,
         RingB1Service::class.java, AllDayRingService::class.java,
-        NextTitleService::class.java, NextDetailService::class.java, CounterService::class.java,
+        NextTitleService::class.java, CounterService::class.java,
+        Info1Service::class.java, Info2Service::class.java,
     )
 
     private var observing = false
@@ -33,6 +34,11 @@ object Refresh {
     }
 
     fun requestCounters(context: Context) = requestOne(context, CounterService::class.java)
+
+    fun requestInfo(context: Context) {
+        requestOne(context, Info1Service::class.java)
+        requestOne(context, Info2Service::class.java)
+    }
 
     private fun requestOne(context: Context, service: Class<*>) {
         try {

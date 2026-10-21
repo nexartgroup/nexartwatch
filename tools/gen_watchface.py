@@ -63,6 +63,13 @@ Y_NOTIF = 371.0
 Y_PILL = 0.914 * S
 X0 = 0.17 * S
 TEXT_W = 0.66 * S
+TITLE_W = 186            # Titel des Termins: schmaler, damit rechts Platz für die Zusatzinfos bleibt
+CELL_X = 270             # Zusatzinfos rechts neben dem Termin: linke Kante
+CELL_ICON = 20
+CELL_TEXT_X = CELL_X + CELL_ICON + 5
+CELL_TEXT_W = 90
+Y_INFO1 = 213.75         # Höhe der Titelzeile
+Y_INFO2 = 240.75         # Höhe der Uhrzeitzeile
 
 DIM_ICON = 120          # Alpha der Symbole bei Zähler 0
 
@@ -71,8 +78,7 @@ FULL = f'x="0" y="0" width="{S:g}" height="{S:g}"'
 # Standardfarben des Themes (Farbwelt von nexart.de) – müssen mit shared/.../sync/Theme.kt übereinstimmen
 THEME_DEFAULT = {
     "time": "#ffeef3f8", "text": "#ffdfe6ee", "marks": "#ff71869a", "track": "#ff203240", "progress": "#ff3fa9f5",
-    "badge": "#ff203240", "date": "#ffa9b7c6", "label": "#ff3fa9f5", "title": "#ffeef3f8", "range": "#ffa9b7c6",
-    "info": "#ff71869a",
+    "badge": "#ff203240", "date": "#ffa9b7c6", "label": "#ff3fa9f5", "title": "#ffeef3f8",
 }
 
 # Ruhemodus: nur Grautöne bis Weiß
@@ -123,7 +129,6 @@ class Pal:
 
 MAIN = ["time", "text", "marks", "track", "progress", "badge", "date"]
 TITLES = ["label", "title"]
-DETAILS = ["range", "info"]
 SRC_RANGED = "[COMPLICATION.RANGED_VALUE_COLORS]"
 SRC_WEIGHTED = "[COMPLICATION.WEIGHTED_ELEMENTS_COLORS]"
 
@@ -134,10 +139,6 @@ def pal_main(dyn=True):
 
 def pal_titles():
     return Pal(SRC_WEIGHTED, TITLES)
-
-
-def pal_details():
-    return Pal(SRC_WEIGHTED, DETAILS)
 
 
 # ---------------------------------------------------------------- Bausteine
@@ -419,14 +420,27 @@ def ambient_ticks():
 
 
 # ---------------------------------------------------------------- Slots
-def slot(slot_id, name, types, primary, primary_type, content, bounding=None):
-    """Nicht editierbarer Slot; Standardquelle = Datenquelle der Uhr-App."""
+def slot(slot_id, name, types, primary, primary_type, content, bounding=None, custom=False):
+    """Slot mit Standardquelle = Datenquelle der Uhr-App; [custom]: der Nutzer kann ihn über "Anpassen" ändern."""
     bounding = bounding or f'<BoundingBox {FULL}/>'
     return (f'<ComplicationSlot slotId="{slot_id}" name="{name}" displayName="{name}" {FULL} '
-            f'supportedTypes="{types} EMPTY" isCustomizable="FALSE">'
+            f'supportedTypes="{types} EMPTY" isCustomizable="{"TRUE" if custom else "FALSE"}">'
             f'<DefaultProviderPolicy defaultSystemProvider="EMPTY" defaultSystemProviderType="EMPTY" '
             f'primaryProvider="{PKG}/{PKG}.provider.{primary}" primaryProviderType="{primary_type}"/>'
             f'{bounding}{content}</ComplicationSlot>')
+
+
+def range_info(pal, ambient=False):
+    """Zeile 3 (Uhrzeit des Termins, aus dem Text der Hauptebene) und Zeile 4 (Kalender · Ort, aus dem Titel)."""
+    if ambient:
+        return (text_part(X0, Y_RANGE, TITLE_W, 30, "ibm_plex_mono_light", 21, A_RANGE,
+                          template("%s", "[COMPLICATION.TEXT]"), ellipsis=True)
+                + text_part(X0, Y_INFO, TEXT_W, 26, "ibm_plex_mono_light", 18, A_INFO,
+                            template("%s", "[COMPLICATION.TITLE]"), ellipsis=True))
+    return (text_part(X0, Y_RANGE, TITLE_W, 30, "ibm_plex_mono_regular", 21, pal.hex("date"),
+                      template("%s", "[COMPLICATION.TEXT]"), ellipsis=True, tr=pal.tr("date"))
+            + text_part(X0, Y_INFO, TEXT_W, 26, "ibm_plex_mono_regular", 18, pal.hex("marks"),
+                        template("%s", "[COMPLICATION.TITLE]"), ellipsis=True, tr=pal.tr("marks")))
 
 
 def main_slot():
@@ -439,8 +453,8 @@ def main_slot():
                + logo_ambient() + clock_ambient() + date_line(pal, True) + weather_battery_ambient())
         if with_counters:
             ca, cb = counters(pal)
-            act += ca
-            amb += cb
+            act += ca + range_info(pal)
+            amb += cb + range_info(pal, True)
         return group("act", act, 0) + group("amb", amb, 255, shift=True)
 
     content = (f'<Complication type="RANGED_VALUE">{layers(pal_main(True), True)}</Complication>'
@@ -504,7 +518,7 @@ def next_title_slot():
         label = text_part(X0, Y_LABEL, TEXT_W, 26, fl, 16, A_LABEL if amb else pal.hex("label"),
                           template("%s", "[COMPLICATION.TITLE]"), ellipsis=True,
                           tr="" if amb else pal.tr("label"))
-        title = text_part(X0, Y_TITLE, TEXT_W, 30, ft, 21, A_TITLE if amb else pal.hex("title"),
+        title = text_part(X0, Y_TITLE, TITLE_W, 30, ft, 21, A_TITLE if amb else pal.hex("title"),
                           template("%s", "[COMPLICATION.TEXT]"), ellipsis=True,
                           tr="" if amb else pal.tr("title"))
         return label + title
@@ -514,27 +528,51 @@ def next_title_slot():
                f'{group("act", text_block(pal, "ibm_plex_mono_regular", "ibm_plex_mono_semibold", False), 0)}'
                f'{group("amb", text_block(pal, "ibm_plex_mono_light", "ibm_plex_mono_regular", True), 255, shift=True)}'
                f'</Complication>')
+    # Tippfläche über alle vier Zeilen des Termins (Zeile 3 und 4 zeichnet die Hauptebene)
     box = (f'<BoundingBox x="{round(X0 - 16)}" y="{round(Y_LABEL - 20)}" width="{round(TEXT_W + 36)}" '
-           f'height="{round(Y_TITLE - Y_LABEL + 40)}"/>')
+           f'height="{round(Y_INFO + 14 - (Y_LABEL - 20))}"/>')
     return slot(2, "Nächster Termin", "WEIGHTED_ELEMENTS", "NextTitleService", "WEIGHTED_ELEMENTS", content, box)
 
 
-def next_detail_slot():
-    def text_block(pal, f1, f2, amb):
-        rng = text_part(X0, Y_RANGE, TEXT_W, 30, f1, 21, A_RANGE if amb else pal.hex("range"),
-                        template("%s", "[COMPLICATION.TEXT]"), ellipsis=True, tr="" if amb else pal.tr("range"))
-        info = text_part(X0, Y_INFO, TEXT_W, 26, f2, 18, A_INFO if amb else pal.hex("info"),
-                         template("%s", "[COMPLICATION.TITLE]"), ellipsis=True, tr="" if amb else pal.tr("info"))
-        return rng + info
+# ---------------------------------------------------------------- Zusatzinfos (bearbeitbare Slots)
+INFO_TEXT = "#ffdfe6ee"
+INFO_ACCENT = "#ff3fa9f5"
 
-    pal = pal_details()
-    content = (f'<Complication type="WEIGHTED_ELEMENTS">'
-               f'{group("act", text_block(pal, "ibm_plex_mono_regular", "ibm_plex_mono_regular", False), 0)}'
-               f'{group("amb", text_block(pal, "ibm_plex_mono_light", "ibm_plex_mono_light", True), 255, shift=True)}'
-               f'</Complication>')
-    box = (f'<BoundingBox x="{round(X0 - 16)}" y="{round(Y_RANGE - 20)}" width="{round(TEXT_W + 36)}" '
-           f'height="{round(Y_INFO - Y_RANGE + 40)}"/>')
-    return slot(3, "Termin-Details", "WEIGHTED_ELEMENTS", "NextDetailService", "WEIGHTED_ELEMENTS", content, box)
+
+def info_cell(kind, cy):
+    """Eine Zusatzinfo: Symbol + Wert. [kind] = Typ der Komplikation (SHORT_TEXT, RANGED_VALUE, GOAL_PROGRESS).
+    Die Farben sind fest (Daten fremder Datenquellen enthalten keine Theme-Farben)."""
+    value_src = {"SHORT_TEXT": None, "RANGED_VALUE": "[COMPLICATION.RANGED_VALUE_VALUE]",
+                 "GOAL_PROGRESS": "[COMPLICATION.GOAL_PROGRESS_VALUE]"}[kind]
+
+    def cell(amb):
+        fam = "ibm_plex_mono_light" if amb else "ibm_plex_mono_medium"
+        col = A_TEXT if amb else INFO_TEXT
+        icon_col = WHITE if amb else INFO_ACCENT
+        out = (f'<PartImage x="{CELL_X}" y="{round(cy - CELL_ICON / 2)}" width="{CELL_ICON}" height="{CELL_ICON}" '
+               f'tintColor="{icon_col}"><Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]"/></PartImage>')
+        if value_src is None:
+            out += text_part(CELL_TEXT_X, cy, CELL_TEXT_W, 28, fam, 19, col, template("%s", "[COMPLICATION.TEXT]"))
+        else:
+            # Hat die Datenquelle keinen Text, zeigen wir den Zahlenwert
+            has_text = "textLength([COMPLICATION.TEXT]) > 0"
+            out += text_part(CELL_TEXT_X, cy, CELL_TEXT_W, 28, fam, 19, col, template("%s", "[COMPLICATION.TEXT]"),
+                             part_tr=f'<Transform target="alpha" value="{esc(f"({has_text}) ? 255 : 0")}"/>')
+            out += text_part(CELL_TEXT_X, cy, CELL_TEXT_W, 28, fam, 19, col,
+                             template("%s", f'numberFormat("0", {value_src})'),
+                             part_tr=f'<Transform target="alpha" value="{esc(f"({has_text}) ? 0 : 255")}"/>')
+        return out
+
+    return group("act", cell(False), 0) + group("amb", cell(True), 255, shift=True)
+
+
+def info_slot(slot_id, name, cy, primary):
+    """Rechts neben dem Termin; der Nutzer kann die Komplikation über "Anpassen" ändern (Puls, Timer, ...)."""
+    kinds = ("SHORT_TEXT", "RANGED_VALUE", "GOAL_PROGRESS")
+    content = "".join(f'<Complication type="{k}">{info_cell(k, cy)}</Complication>' for k in kinds)
+    content += '<Complication type="EMPTY"><Group name="leer" x="0" y="0" width="1" height="1"/></Complication>'
+    box = f'<BoundingBox x="{CELL_X - 6}" y="{round(cy - 16)}" width="{CELL_TEXT_X + CELL_TEXT_W - CELL_X + 8}" height="32"/>'
+    return slot(slot_id, name, " ".join(kinds), primary, "SHORT_TEXT", content, box, custom=True)
 
 
 def weather_bitmap_fonts():
@@ -566,10 +604,11 @@ def build():
         + main_slot()
         + ring_slot(0, "Termine A1", "RingA1Service", 0)
         + ring_slot(1, "Termine A2", "RingA2Service", 0)
-        + ring_slot(5, "Termine A3", "RingA3Service", 0)
         + ring_slot(6, "Termine B1", "RingB1Service", 1)
         + all_day_slot(7, "Ganztägig", "AllDayRingService")
-        + next_title_slot() + next_detail_slot()
+        + next_title_slot()
+        + info_slot(3, "Zusatzinfo 1", Y_INFO1, "Info1Service")
+        + info_slot(5, "Zusatzinfo 2", Y_INFO2, "Info2Service")
     )
     return (f'<?xml version="1.0" encoding="UTF-8"?>\n'
             f'<WatchFace width="450" height="450" clipShape="CIRCLE">{weather_bitmap_fonts()}'

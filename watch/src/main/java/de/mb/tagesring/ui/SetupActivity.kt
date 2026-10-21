@@ -15,6 +15,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import de.mb.tagesring.data.EventStore
+import de.mb.tagesring.data.InfoStore
+import de.mb.tagesring.health.HealthSync
 import de.mb.tagesring.data.NotificationStore
 import de.mb.tagesring.provider.Refresh
 import de.mb.tagesring.push.WatchFaceInstaller
@@ -34,6 +36,9 @@ class SetupActivity : ComponentActivity() {
 
     private val calendarPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { refresh() }
+
+    private val healthPermissions =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { enableHealth() }
 
     private val activePermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -62,6 +67,9 @@ class SetupActivity : ComponentActivity() {
         column.addView(activateButton)
         column.addView(button("Kalender der Uhr erlauben") {
             calendarPermission.launch(Manifest.permission.READ_CALENDAR)
+        })
+        column.addView(button("Schritte und Puls erlauben") {
+            if (HealthSync.hasPermissions(this)) enableHealth() else healthPermissions.launch(HealthSync.PERMISSIONS)
         })
         column.addView(button("Termine vom Handy holen") {
             lifecycleScope.launch {
@@ -111,6 +119,11 @@ class SetupActivity : ComponentActivity() {
                 } else {
                     "✗ Handy-App: Benachrichtigungszugriff erlauben"
                 })
+                append("\nSchritte/Puls: " + when {
+                    !HealthSync.hasPermissions(this@SetupActivity) -> "Berechtigung fehlt"
+                    InfoStore.healthStatus(this@SetupActivity).isEmpty() -> "nicht angemeldet"
+                    else -> InfoStore.healthStatus(this@SetupActivity)
+                })
                 s.error?.let { append("\n$it") }
                 if (snap.connected && snap.packages.isNotEmpty()) {
                     append("\n\nAktive Apps (Handy):\n")
@@ -120,6 +133,14 @@ class SetupActivity : ComponentActivity() {
             installButton.text = if (s.installed) "Watchface aktualisieren" else "Watchface installieren"
             installButton.isEnabled = s.supported
             activateButton.isEnabled = s.supported && s.installed && !s.active
+        }
+    }
+
+    private fun enableHealth() {
+        lifecycleScope.launch {
+            say(if (HealthSync.hasPermissions(this@SetupActivity)) HealthSync.enable(this@SetupActivity) else "Schritte/Puls: Berechtigung fehlt")
+            Refresh.requestInfo(applicationContext)
+            refresh()
         }
     }
 

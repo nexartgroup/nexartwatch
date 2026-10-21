@@ -1,6 +1,7 @@
 package de.mb.tagesring.phone.data
 
 import android.content.Context
+import de.mb.tagesring.sync.InfoType
 import de.mb.tagesring.sync.Theme
 
 /** Einstellungen der Handy-App (Kalenderauswahl, Ganztägig). */
@@ -67,6 +68,12 @@ class Settings(context: Context) {
     var paletteStart: Int
         get() = prefs.getInt(KEY_PALETTE_START, 0).coerceIn(0, Palette.COLORS.size - 1)
         set(value) = prefs.edit().putInt(KEY_PALETTE_START, value).apply()
+
+    /** Zusatzinfos rechts neben dem Termin; [index] 1 = oben, 2 = unten. */
+    fun infoSlot(index: Int): InfoType =
+        InfoType.fromId(prefs.getString("info_slot$index", null), if (index == 1) InfoType.STEPS else InfoType.HEART_RATE)
+
+    fun setInfoSlot(index: Int, type: InfoType) = prefs.edit().putString("info_slot$index", type.id).apply()
 
     var lastSyncAt: Long
         get() = prefs.getLong(KEY_LAST_SYNC, 0L)
